@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบขอเพลง - แอดมิน</title>
+    <link rel="stylesheet" href="new-style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>ระบบขอเพลง</h1>
+            <nav>
+                <ul>
+                    <li><a href="index.html" class="nav-item"><i class="fas fa-home"></i> หน้าแรก</a></li>
+                    <li><a href="queue.html" class="nav-item"><i class="fas fa-music"></i> คิวเพลง</a></li>
+                    <li><a href="request.html" class="nav-item"><i class="fas fa-plus-circle"></i> ขอเพลง</a></li>
+                    <li><a href="admin.html" class="nav-item active"><i class="fas fa-user-shield"></i> แอดมิน</a></li>
+                </ul>
+            </nav>
+        </header>
+
+        <main>
+            <section class="admin-section">
+                <div class="admin-login form-section">
+                    <h2><i class="fas fa-lock"></i> เข้าสู่ระบบแอดมิน</h2>
+                    <div class="login-form">
+                        <input type="password" id="adminPassword" placeholder="รหัสผ่านแอดมิน">
+                        <button type="button" id="togglePassword" class="toggle-password" tabindex="-1"><i class="fas fa-eye"></i></button>
+                        <button id="adminLogin" class="primary-btn"><i class="fas fa-sign-in-alt"></i> เข้าสู่ระบบ</button>
+                    </div>
+                    <div id="adminError" class="admin-error" style="display:none;"></div>
+                </div>
+
+                <div class="admin-panel form-section hidden">
+                    <h2><i class="fas fa-tools"></i> แผงควบคุมแอดมิน</h2>
+                    <div class="admin-stats">
+                        <div class="stat-item">
+                            <span class="stat-label"><i class="fas fa-hourglass-half"></i> รอการอนุมัติ:</span>
+                            <span id="pendingCount">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label"><i class="fas fa-check-circle"></i> เล่นแล้ว:</span>
+                            <span id="playedCount">0</span>
+                        </div>
+                    </div>
+                    <div class="admin-actions">
+                        <button id="systemStatus" class="status-btn enabled primary-btn" onclick="toggleSystemStatus()"><i class="fas fa-power-off"></i> ปิดระบบ</button>
+                        <button id="clearPlayed" class="secondary-btn"><i class="fas fa-trash"></i> ล้างรายการที่เล่นแล้ว</button>
+                        <button id="exportQueue" class="secondary-btn"><i class="fas fa-file-export"></i> ส่งออกข้อมูล</button>
+                        <button onclick="logoutAdmin()" class="secondary-btn"><i class="fas fa-sign-out-alt"></i> ออกจากระบบ</button>
+                    </div>
+                </div>
+
+                <div class="song-queue queue-section">
+                    <h2><i class="fas fa-music"></i> คิวเพลง</h2>
+                    <div class="queue-controls">
+                        <input type="text" id="searchQueue" placeholder="ค้นหาเพลง...">
+                        <select id="filterStatus">
+                            <option value="all">ทั้งหมด</option>
+                            <option value="pending">รอเล่น</option>
+                            <option value="played">เล่นแล้ว</option>
+                        </select>
+                    </div>
+                    <div id="songQueue"></div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Notification System -->
+        <div id="notification" class="notification hidden">
+            <div id="notificationMessage"></div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html> 

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบขอเพลง - ขอเพลง</title>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="new-style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>ระบบขอเพลง</h1>
+            <nav>
+                <ul>
+                    <li><a href="index.html" class="nav-item"><i class="fas fa-home"></i> หน้าแรก</a></li>
+                    <li><a href="queue.html" class="nav-item"><i class="fas fa-music"></i> คิวเพลง</a></li>
+                    <li><a href="request.html" class="nav-item active"><i class="fas fa-plus-circle"></i> ขอเพลง</a></li>
+                    <li><a href="admin.html" class="nav-item"><i class="fas fa-user-shield"></i> แอดมิน</a></li>
+                </ul>
+            </nav>
+        </header>
+
+        <main>
+            <div class="request-section">
+                <div class="request-header">
+                    <h2>ขอเพลง</h2>
+                    <p class="request-description">กรอกข้อมูลเพื่อขอเพลงที่คุณต้องการ</p>
+                </div>
+                
+                <form id="requestForm" class="request-form">
+                    <div class="form-group">
+                        <input type="text" id="requesterName" name="requesterName" required 
+                               placeholder="กรอกชื่อของคุณ">
+                    </div>
+                    
+                    <div class="form-group">
+                        <input type="text" id="songTitle" name="songTitle" required 
+                               placeholder="กรอกชื่อเพลงที่ต้องการ">
+                    </div>
+                    
+                    <div class="form-group">
+                        <input type="text" id="songLink" name="songLink" 
+                               placeholder="ลิงก์เพลง (ถ้ามี)">
+                    </div>
+                    
+                    <button type="submit" class="submit-btn">
+                        <span class="btn-text">ส่งคำขอ</span>
+                        <span class="btn-icon">→</span>
+                    </button>
+                </form>
+            </div>
+        </main>
+
+        <div id="notification" class="notification hidden">
+            <div id="notificationMessage"></div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        document.getElementById('requestForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const requesterName = document.getElementById('requesterName').value;
+            const songTitle = document.getElementById('songTitle').value;
+            
+            addSong(songTitle, requesterName);
+            
+            // Reset form
+            this.reset();
+            
+            // Show success message
+            const notification = document.getElementById('notification');
+            const message = document.getElementById('notificationMessage');
+            message.textContent = 'ส่งคำขอเพลงสำเร็จ!';
+            notification.className = 'notification success';
+            notification.classList.remove('hidden');
+            
+            // Hide notification after 3 seconds
+            setTimeout(() => {
+                notification.classList.add('hidden');
+            }, 3000);
+        });
+    </script>
+</body>
+</html> 

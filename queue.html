@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบขอเพลง - คิวเพลง</title>
+    <link rel="stylesheet" href="new-style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>ระบบขอเพลง</h1>
+            <nav>
+                <ul>
+                    <li><a href="index.html" class="nav-item"><i class="fas fa-home"></i> หน้าแรก</a></li>
+                    <li><a href="queue.html" class="nav-item active"><i class="fas fa-music"></i> คิวเพลง</a></li>
+                    <li><a href="request.html" class="nav-item"><i class="fas fa-plus-circle"></i> ขอเพลง</a></li>
+                    <li><a href="admin.html" class="nav-item"><i class="fas fa-user-shield"></i> แอดมิน</a></li>
+                </ul>
+            </nav>
+        </header>
+
+        <main>
+            <section class="hero-section">
+                <div class="hero-content">
+                    <h2><i class="fas fa-music"></i> คิวเพลง</h2>
+                    <p class="hero-description">ดูคิวเพลงที่รอเล่นและที่เล่นไปแล้วได้ทันที</p>
+                </div>
+                <div class="hero-image">
+                    <i class="fas fa-list-ol"></i>
+                </div>
+            </section>
+            <section class="queue-section">
+                <h2><i class="fas fa-music"></i> คิวเพลง</h2>
+                <div class="queue-controls">
+                    <input type="text" id="searchQueue" class="search-input" placeholder="ค้นหาเพลง...">
+                    <select id="filterStatus" class="filter-select">
+                        <option value="all">ทั้งหมด</option>
+                        <option value="pending">รอเล่น</option>
+                        <option value="played">เล่นแล้ว</option>
+                    </select>
+                </div>
+                <div id="songQueue" class="song-queue">
+                    <!-- Songs will be added here dynamically -->
+                </div>
+            </section>
+        </main>
+
+        <!-- Notification System -->
+        <div id="notification" class="notification hidden">
+            <div id="notificationMessage"></div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html> 
