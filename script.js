@@ -90,6 +90,12 @@ if (togglePasswordBtn && adminPasswordInput) {
 
 // Initialize
 async function init() {
+    const isServerConnected = await checkServerConnection();
+    if (!isServerConnected) {
+        showNotification('ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ กรุณาลองใหม่อีกครั้ง', 'error', '✕');
+        return;
+    }
+
     await loadQueue();
     updateStats();
     renderQueue();
@@ -228,20 +234,42 @@ function updateAdminUI() {
 async function loadQueue() {
     try {
         console.log('Loading queue from server...'); // Debug log
-        const response = await fetch(`${API_URL}/queue`);
+        const response = await fetch(`${API_URL}/queue`, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`Server responded with status: ${response.status}`);
+        }
+
         const data = await response.json();
         console.log('Received data from server:', data); // Debug log
         
-        songQueue = data.queue || [];
-        pendingSongs = data.pending || [];
-        isSystemEnabled = data.isSystemEnabled;
+        if (!data || typeof data !== 'object') {
+            throw new Error('Invalid data received from server');
+        }
+        
+        songQueue = Array.isArray(data.queue) ? data.queue : [];
+        pendingSongs = Array.isArray(data.pending) ? data.pending : [];
+        isSystemEnabled = Boolean(data.isSystemEnabled);
         
         console.log('Updated local state:', { songQueue, pendingSongs }); // Debug log
         
         updateSystemStatusUI();
+        updateStats();
+        renderQueue();
     } catch (error) {
         console.error('Error loading queue:', error);
-        showNotification('เกิดข้อผิดพลาดในการโหลดคิวเพลง', 'error');
+        showNotification(`เกิดข้อผิดพลาดในการโหลดคิวเพลง: ${error.message}`, 'error', '✕');
+        
+        // Set empty arrays to prevent undefined errors
+        songQueue = [];
+        pendingSongs = [];
+        renderQueue();
     }
 }
 
@@ -756,3 +784,19 @@ document.addEventListener('DOMContentLoaded', () => {
     init();
     initTheme();
 });
+
+// Add a function to check server connection
+async function checkServerConnection() {
+    try {
+        const response = await fetch(`${API_URL}/queue`, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json'
+            }
+        });
+        return response.ok;
+    } catch (error) {
+        console.error('Server connection error:', error);
+        return false;
+    }
+}
