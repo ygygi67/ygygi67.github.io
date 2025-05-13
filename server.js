@@ -1,13 +1,18 @@
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
+const path = require('path');
 const app = express();
-const port = 3000;
+
+// Get port from environment variable or use 3000 as default
+const port = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors());
 app.use(bodyParser.json());
-app.use(express.static('public'));
+
+// Serve static files from the 'public' directory
+app.use(express.static(path.join(__dirname, 'public')));
 
 // In-memory storage (replace with a database in production)
 let songQueue = [];
@@ -43,11 +48,10 @@ app.post('/add', (req, res) => {
         timestamp: new Date().toISOString()
     };
     
-    // Add to pending songs
     pendingSongs.push(newSong);
     
-    console.log('New song added:', newSong); // Debug log
-    console.log('Current pending songs:', pendingSongs); // Debug log
+    console.log('New song added:', newSong);
+    console.log('Current pending songs:', pendingSongs);
     
     res.json({ success: true, song: newSong });
 });
@@ -73,8 +77,8 @@ app.post('/api/queue', (req, res) => {
     
     pendingSongs.push(newSong);
     
-    console.log('New song added:', newSong); // Debug log
-    console.log('Current pending songs:', pendingSongs); // Debug log
+    console.log('New song added:', newSong);
+    console.log('Current pending songs:', pendingSongs);
     
     res.json({ success: true, song: newSong });
 });
@@ -137,6 +141,11 @@ app.post('/api/system/toggle', (req, res) => {
     res.json({ success: true, isSystemEnabled });
 });
 
+// Serve the main HTML file for all other routes
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
     console.error(err.stack);
@@ -148,5 +157,5 @@ app.use((err, req, res, next) => {
 });
 
 app.listen(port, () => {
-    console.log(`Server running at http://localhost:${port}`);
+    console.log(`Server running on port ${port}`);
 }); 
