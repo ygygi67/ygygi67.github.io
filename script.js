@@ -53,9 +53,7 @@ const animateSkills = () => {
 
 // Constants
 const ADMIN_PASSWORD = 'admin123'; // Change this to a secure password in production
-const STORAGE_KEY = 'songQueue';
-const PENDING_KEY = 'pendingSongs';
-const SYSTEM_STATUS_KEY = 'systemStatus';
+const API_URL = 'http://localhost:3000/api';
 
 // State
 let isAdminLoggedIn = false;
@@ -91,10 +89,8 @@ if (togglePasswordBtn && adminPasswordInput) {
 }
 
 // Initialize
-function init() {
-    loadQueue();
-    loadPendingSongs();
-    loadSystemStatus();
+async function init() {
+    await loadQueue();
     updateStats();
     renderQueue();
     setupEventListeners();
@@ -118,41 +114,47 @@ function setupEventListeners() {
     if (exportQueueBtn) {
         exportQueueBtn.addEventListener('click', exportQueue);
     }
+    const sortBy = document.getElementById('sortBy');
+    if (sortBy) {
+        sortBy.addEventListener('change', renderQueue);
+    }
     if (requestForm) {
-        requestForm.addEventListener('submit', function(e) {
+        requestForm.addEventListener('submit', async function(e) {
             e.preventDefault();
             const requesterName = document.getElementById('requesterName').value;
             const songTitle = document.getElementById('songTitle').value;
             const songLink = document.getElementById('songLink') ? document.getElementById('songLink').value : '';
-            addSong(songTitle, requesterName, songLink);
+            await addSong(songTitle, requesterName, songLink);
             this.reset();
-            // Show success message
-            const notification = document.getElementById('notification');
-            const message = document.getElementById('notificationMessage');
-            if (message && notification) {
-                message.textContent = 'ส่งคำขอเพลงสำเร็จ!';
-                notification.className = 'notification success';
-                notification.classList.remove('hidden');
-                setTimeout(() => {
-                    notification.classList.add('hidden');
-                }, 3000);
-            }
+            showNotification('ส่งคำขอเพลงสำเร็จ!');
         });
     }
 }
 
 // System Status Management
-function loadSystemStatus() {
-    const savedStatus = localStorage.getItem(SYSTEM_STATUS_KEY);
-    isSystemEnabled = savedStatus === null ? true : savedStatus === 'true';
-    updateSystemStatusUI();
+async function loadSystemStatus() {
+    try {
+        const response = await fetch(`${API_URL}/queue`);
+        const data = await response.json();
+        isSystemEnabled = data.isSystemEnabled;
+        updateSystemStatusUI();
+    } catch (error) {
+        console.error('Error loading system status:', error);
+    }
 }
 
-function toggleSystemStatus() {
-    isSystemEnabled = !isSystemEnabled;
-    localStorage.setItem(SYSTEM_STATUS_KEY, isSystemEnabled.toString());
-    updateSystemStatusUI();
-    showNotification(isSystemEnabled ? 'ระบบเปิดใช้งานแล้ว' : 'ระบบปิดใช้งานแล้ว');
+async function toggleSystemStatus() {
+    try {
+        const response = await fetch(`${API_URL}/system/toggle`, {
+            method: 'POST'
+        });
+        const data = await response.json();
+        isSystemEnabled = data.isSystemEnabled;
+        updateSystemStatusUI();
+        showNotification(isSystemEnabled ? 'ระบบเปิดใช้งานแล้ว' : 'ระบบปิดใช้งานแล้ว');
+    } catch (error) {
+        console.error('Error toggling system status:', error);
+    }
 }
 
 function updateSystemStatusUI() {
@@ -223,22 +225,24 @@ function updateAdminUI() {
 }
 
 // Song Management
-function loadQueue() {
-    const savedQueue = localStorage.getItem(STORAGE_KEY);
-    songQueue = savedQueue ? JSON.parse(savedQueue) : [];
-}
-
-function loadPendingSongs() {
-    const savedPending = localStorage.getItem(PENDING_KEY);
-    pendingSongs = savedPending ? JSON.parse(savedPending) : [];
-}
-
-function saveQueue() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(songQueue));
-}
-
-function savePendingSongs() {
-    localStorage.setItem(PENDING_KEY, JSON.stringify(pendingSongs));
+async function loadQueue() {
+    try {
+        console.log('Loading queue from server...'); // Debug log
+        const response = await fetch(`${API_URL}/queue`);
+        const data = await response.json();
+        console.log('Received data from server:', data); // Debug log
+        
+        songQueue = data.queue || [];
+        pendingSongs = data.pending || [];
+        isSystemEnabled = data.isSystemEnabled;
+        
+        console.log('Updated local state:', { songQueue, pendingSongs }); // Debug log
+        
+        updateSystemStatusUI();
+    } catch (error) {
+        console.error('Error loading queue:', error);
+        showNotification('เกิดข้อผิดพลาดในการโหลดคิวเพลง', 'error');
+    }
 }
 
 function updateStats() {
@@ -251,12 +255,18 @@ function updateStats() {
 }
 
 function renderQueue() {
-    if (!songQueueContainer) return;
+    if (!songQueueContainer) {
+        console.error('Song queue container not found');
+        return;
+    }
+
+    console.log('Rendering queue with:', { songQueue, pendingSongs }); // Debug log
 
     const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
     const statusFilter = filterStatus ? filterStatus.value : 'all';
+    const sortBy = document.getElementById('sortBy') ? document.getElementById('sortBy').value : 'time-desc';
 
-    const filteredSongs = [...pendingSongs, ...songQueue].filter(song => {
+    let filteredSongs = [...pendingSongs, ...songQueue].filter(song => {
         const matchesSearch = song.title.toLowerCase().includes(searchTerm) ||
                             song.requester.toLowerCase().includes(searchTerm);
         const matchesStatus = statusFilter === 'all' ||
@@ -265,108 +275,178 @@ function renderQueue() {
         return matchesSearch && matchesStatus;
     });
 
+    console.log('Filtered songs:', filteredSongs); // Debug log
+
+    // Sort the filtered songs
+    filteredSongs.sort((a, b) => {
+        switch (sortBy) {
+            case 'time-desc':
+                return new Date(b.timestamp) - new Date(a.timestamp);
+            case 'time-asc':
+                return new Date(a.timestamp) - new Date(b.timestamp);
+            case 'title-asc':
+                return a.title.localeCompare(b.title, 'th');
+            case 'title-desc':
+                return b.title.localeCompare(a.title, 'th');
+            case 'requester-asc':
+                return a.requester.localeCompare(b.requester, 'th');
+            case 'requester-desc':
+                return b.requester.localeCompare(a.requester, 'th');
+            default:
+                return 0;
+        }
+    });
+
+    const queueHTML = filteredSongs.map((song, index) => {
+        const requestTime = new Date(song.timestamp);
+        const formattedTime = requestTime.toLocaleString('th-TH', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        
+        return `
+        <div class="song-item ${song.played ? 'played' : ''} ${song.status === 'rejected' ? 'rejected' : ''}">
+            <div class="song-info">
+                <div class="song-title">
+                    <span class="song-number">${index + 1}</span>
+                    ${song.title}
+                </div>
+                <div class="song-requester">ขอโดย: ${song.requester}</div>
+                <div class="song-time">⏰ ขอเมื่อ: ${formattedTime}</div>
+                ${song.link ? `<div class="song-link">🔗 <a href="${song.link}" target="_blank" rel="noopener">${song.link}</a></div>` : ''}
+                <div class="song-status ${song.status === 'rejected' ? 'rejected' : ''}">
+                    ${song.status === 'rejected' ? 'ถูกปฏิเสธ' : song.played ? 'เล่นแล้ว' : 'รอเล่น'}
+                </div>
+            </div>
+            
+            <div class="song-actions">
+                ${!song.played && pendingSongs.includes(song) && song.status !== 'rejected' ? `
+                    <button class="approve-btn" onclick="approveSong('${song.id}')">
+                        <i class="fas fa-check"></i> อนุมัติ
+                    </button>
+                    <button class="reject-btn" onclick="rejectSong('${song.id}')">
+                        <i class="fas fa-times"></i> ปฏิเสธ
+                    </button>
+                ` : ''}
+                ${!song.played && !pendingSongs.includes(song) ? `
+                    <button class="mark-played-btn" onclick="markAsPlayed('${song.id}')">
+                        <i class="fas fa-play"></i> เล่นแล้ว
+                    </button>
+                ` : ''}
+                <button class="remove-btn" onclick="removeSong('${song.id}')">
+                    <i class="fas fa-trash"></i> ลบ
+                </button>
+            </div>
+        </div>
+        `;
+    }).join('');
+
     songQueueContainer.innerHTML = `
         ${!isSystemEnabled ? '<div class="system-status-message">ระบบปิดใช้งานชั่วคราว</div>' : ''}
-        ${filteredSongs.map(song => `
-            <div class="song-item ${song.played ? 'played' : ''} ${song.status === 'rejected' ? 'rejected' : ''}">
-                <div class="song-info">
-                    <div class="song-title">${song.title}</div>
-                    <div class="song-requester">ขอโดย: ${song.requester}</div>
-                    ${song.link ? `<div class="song-link">🔗 <a href="${song.link}" target="_blank" rel="noopener">${song.link}</a></div>` : ''}
-                    <div class="song-status ${song.status === 'rejected' ? 'rejected' : ''}">
-                        ${song.status === 'rejected' ? 'ถูกปฏิเสธ' : song.played ? 'เล่นแล้ว' : 'รอเล่น'}
-                    </div>
-                </div>
-                ${isAdminLoggedIn ? `
-                    <div class="song-actions">
-                        ${!song.played && pendingSongs.includes(song) && song.status !== 'rejected' ? `
-                            <button class="approve-btn" onclick="approveSong('${song.id}')">
-                                <i class="fas fa-check"></i> อนุมัติ
-                            </button>
-                            <button class="reject-btn" onclick="rejectSong('${song.id}')">
-                                <i class="fas fa-times"></i> ปฏิเสธ
-                            </button>
-                        ` : ''}
-                        ${!song.played && !pendingSongs.includes(song) ? `
-                            <button class="mark-played-btn" onclick="markAsPlayed('${song.id}')">
-                                <i class="fas fa-play"></i> เล่นแล้ว
-                            </button>
-                        ` : ''}
-                        <button class="remove-btn" onclick="removeSong('${song.id}')">
-                            <i class="fas fa-trash"></i> ลบ
-                        </button>
-                    </div>
-                ` : ''}
-            </div>
-        `).join('')}
+        ${queueHTML}
     `;
+
+    console.log('Queue rendered with HTML:', songQueueContainer.innerHTML); // Debug log
 }
 
-function addSong(title, requester, link = '') {
+async function addSong(title, requester, link = '') {
     if (!isSystemEnabled) {
         showNotification('ระบบปิดใช้งานชั่วคราว', 'error');
         return;
     }
 
-    const newSong = {
-        id: Date.now().toString(),
-        title,
-        requester,
-        link: link || '',
-        played: false,
-        timestamp: new Date().toISOString()
-    };
-
-    if (isAdminLoggedIn) {
-        songQueue.push(newSong);
-        saveQueue();
-    } else {
-        pendingSongs.push(newSong);
-        savePendingSongs();
+    if (!title || !requester) {
+        showNotification('กรุณากรอกชื่อเพลงและชื่อผู้ขอ', 'error');
+        return;
     }
 
-    updateStats();
-    renderQueue();
-    showNotification(isAdminLoggedIn ? 'เพิ่มเพลงสำเร็จ' : 'ส่งคำขอเพลงสำเร็จ');
-}
-
-function approveSong(songId) {
-    const songIndex = pendingSongs.findIndex(song => song.id === songId);
-    if (songIndex !== -1) {
-        const song = pendingSongs[songIndex];
-        songQueue.push(song);
-        pendingSongs.splice(songIndex, 1);
-        saveQueue();
-        savePendingSongs();
-        updateStats();
-        renderQueue();
-        showNotification('อนุมัติเพลงสำเร็จ');
+    try {
+        const response = await fetch(`${API_URL}/queue`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ title, requester, link })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+            await loadQueue();
+            updateStats();
+            renderQueue();
+            showNotification('ส่งคำขอเพลงสำเร็จ!', 'success', '✓');
+        } else {
+            throw new Error(data.message || 'Failed to add song');
+        }
+    } catch (error) {
+        console.error('Error adding song:', error);
+        showNotification('เกิดข้อผิดพลาดในการเพิ่มเพลง: ' + error.message, 'error', '✕');
     }
 }
 
-function rejectSong(songId) {
-    const songIndex = pendingSongs.findIndex(song => song.id === songId);
-    if (songIndex !== -1) {
-        const song = pendingSongs[songIndex];
-        song.status = 'rejected';
-        savePendingSongs();
-        showNotification(`ปฏิเสธคำขอเพลง "${song.title}" แล้ว`, 'error');
-        renderQueue();
+async function approveSong(songId) {
+    try {
+        const response = await fetch(`${API_URL}/approve/${songId}`, {
+            method: 'POST'
+        });
+        
+        if (response.ok) {
+            await loadQueue();
+            updateStats();
+            renderQueue();
+            showNotification('อนุมัติเพลงสำเร็จ');
+        } else {
+            throw new Error('Failed to approve song');
+        }
+    } catch (error) {
+        console.error('Error approving song:', error);
+        showNotification('เกิดข้อผิดพลาดในการอนุมัติเพลง', 'error');
     }
 }
 
-function markAsPlayed(songId) {
-    const song = songQueue.find(song => song.id === songId);
-    if (song) {
-        song.played = true;
-        saveQueue();
-        updateStats();
-        renderQueue();
-        showNotification('อัปเดตสถานะเพลงสำเร็จ');
+async function rejectSong(songId) {
+    try {
+        const response = await fetch(`${API_URL}/reject/${songId}`, {
+            method: 'POST'
+        });
+        
+        if (response.ok) {
+            await loadQueue();
+            showNotification('ปฏิเสธคำขอเพลงสำเร็จ', 'error');
+        } else {
+            throw new Error('Failed to reject song');
+        }
+    } catch (error) {
+        console.error('Error rejecting song:', error);
+        showNotification('เกิดข้อผิดพลาดในการปฏิเสธเพลง', 'error');
     }
 }
 
-function removeSong(songId) {
+async function markAsPlayed(songId) {
+    try {
+        const response = await fetch(`${API_URL}/played/${songId}`, {
+            method: 'POST'
+        });
+        
+        if (response.ok) {
+            await loadQueue();
+            updateStats();
+            renderQueue();
+            showNotification('อัปเดตสถานะเพลงสำเร็จ');
+        } else {
+            throw new Error('Failed to mark song as played');
+        }
+    } catch (error) {
+        console.error('Error marking song as played:', error);
+        showNotification('เกิดข้อผิดพลาดในการอัปเดตสถานะเพลง', 'error');
+    }
+}
+
+async function removeSong(songId) {
     const song = [...songQueue, ...pendingSongs].find(s => s.id === songId);
     if (!song) return;
 
@@ -374,35 +454,59 @@ function removeSong(songId) {
     confirmDialog.className = 'confirm-dialog';
     confirmDialog.innerHTML = `
         <div class="confirm-dialog-content">
-            <h3>ยืนยันการลบเพลง</h3>
+            <h3><i class="fas fa-exclamation-triangle"></i> ยืนยันการลบเพลง</h3>
             <p>คุณต้องการลบเพลง "${song.title}" ออกจากคิวใช่หรือไม่?</p>
+            <p class="song-details">
+                <strong>ขอโดย:</strong> ${song.requester}<br>
+                <strong>สถานะ:</strong> ${song.played ? 'เล่นแล้ว' : (song.status === 'rejected' ? 'ถูกปฏิเสธ' : 'รอเล่น')}
+            </p>
             <div class="confirm-dialog-buttons">
-                <button class="confirm-btn" onclick="confirmRemoveSong('${songId}')">ยืนยัน</button>
-                <button class="cancel-btn" onclick="closeConfirmDialog()">ยกเลิก</button>
+                <button class="cancel-btn" onclick="closeConfirmDialog()">
+                    <i class="fas fa-times"></i> ยกเลิก
+                </button>
+                <button class="confirm-btn" onclick="confirmRemoveSong('${songId}')">
+                    <i class="fas fa-trash"></i> ลบ
+                </button>
             </div>
         </div>
     `;
     document.body.appendChild(confirmDialog);
     setTimeout(() => confirmDialog.classList.add('show'), 10);
+
+    // Add keyboard support
+    const handleKeyPress = (e) => {
+        if (e.key === 'Escape') {
+            closeConfirmDialog();
+        } else if (e.key === 'Enter') {
+            confirmRemoveSong(songId);
+        }
+    };
+    document.addEventListener('keydown', handleKeyPress);
+    confirmDialog.addEventListener('click', (e) => {
+        if (e.target === confirmDialog) {
+            closeConfirmDialog();
+        }
+    });
 }
 
-function confirmRemoveSong(songId) {
-    const song = [...songQueue, ...pendingSongs].find(s => s.id === songId);
-    const queueIndex = songQueue.findIndex(s => s.id === songId);
-    const pendingIndex = pendingSongs.findIndex(s => s.id === songId);
-
-    if (queueIndex !== -1) {
-        songQueue.splice(queueIndex, 1);
-        saveQueue();
+async function confirmRemoveSong(songId) {
+    try {
+        const response = await fetch(`${API_URL}/song/${songId}`, {
+            method: 'DELETE'
+        });
+        
+        if (response.ok) {
+            await loadQueue();
+            updateStats();
+            renderQueue();
+            showNotification('ลบเพลงสำเร็จ');
+        } else {
+            throw new Error('Failed to remove song');
+        }
+    } catch (error) {
+        console.error('Error removing song:', error);
+        showNotification('เกิดข้อผิดพลาดในการลบเพลง', 'error');
     }
-    if (pendingIndex !== -1) {
-        pendingSongs.splice(pendingIndex, 1);
-        savePendingSongs();
-    }
-
-    updateStats();
-    renderQueue();
-    showNotification(`ลบเพลง "${song.title}" ออกจากคิวแล้ว`, 'error', '<i class="fas fa-trash"></i>');
     closeConfirmDialog();
 }
 
@@ -410,16 +514,28 @@ function closeConfirmDialog() {
     const dialog = document.querySelector('.confirm-dialog');
     if (dialog) {
         dialog.classList.remove('show');
-        setTimeout(() => dialog.remove(), 300); 
+        setTimeout(() => {
+            dialog.remove();
+        }, 300);
     }
 }
 
-function clearPlayedSongs() {
-    songQueue = songQueue.filter(song => !song.played);
-    saveQueue();
-    updateStats();
-    renderQueue();
-    showNotification('ล้างรายการที่เล่นแล้วสำเร็จ');
+async function clearPlayedSongs() {
+    try {
+        const playedSongs = songQueue.filter(song => song.played);
+        for (const song of playedSongs) {
+            await fetch(`${API_URL}/song/${song.id}`, {
+                method: 'DELETE'
+            });
+        }
+        await loadQueue();
+        updateStats();
+        renderQueue();
+        showNotification('ล้างรายการที่เล่นแล้วสำเร็จ');
+    } catch (error) {
+        console.error('Error clearing played songs:', error);
+        showNotification('เกิดข้อผิดพลาดในการล้างรายการ', 'error');
+    }
 }
 
 function exportQueue() {
@@ -438,6 +554,81 @@ function exportQueue() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+    showNotification('ส่งออกข้อมูลสำเร็จ');
+}
+
+function importQueue(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const data = JSON.parse(e.target.result);
+            
+            // Validate the imported data structure
+            if (!data.queue || !data.pending) {
+                throw new Error('รูปแบบไฟล์ไม่ถูกต้อง');
+            }
+
+            // Confirm before importing
+            const confirmDialog = document.createElement('div');
+            confirmDialog.className = 'confirm-dialog';
+            confirmDialog.innerHTML = `
+                <div class="confirm-dialog-content">
+                    <h3>ยืนยันการนำเข้าข้อมูล</h3>
+                    <p>การนำเข้าข้อมูลจะแทนที่ข้อมูลปัจจุบันทั้งหมด คุณต้องการดำเนินการต่อใช่หรือไม่?</p>
+                    <div class="confirm-dialog-buttons">
+                        <button class="confirm-btn" onclick="confirmImport(${JSON.stringify(data)})">ยืนยัน</button>
+                        <button class="cancel-btn" onclick="closeConfirmDialog()">ยกเลิก</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(confirmDialog);
+            setTimeout(() => confirmDialog.classList.add('show'), 10);
+
+        } catch (error) {
+            showNotification('เกิดข้อผิดพลาดในการนำเข้าข้อมูล: ' + error.message, 'error');
+        }
+    };
+    reader.readAsText(file);
+}
+
+async function confirmImport(data) {
+    try {
+        // First, clear existing songs
+        const allSongs = [...songQueue, ...pendingSongs];
+        for (const song of allSongs) {
+            await fetch(`${API_URL}/song/${song.id}`, {
+                method: 'DELETE'
+            });
+        }
+
+        // Then add the imported songs
+        for (const song of data.queue) {
+            await fetch(`${API_URL}/queue`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    title: song.title,
+                    requester: song.requester,
+                    link: song.link
+                })
+            });
+        }
+
+        // Load the updated queue
+        await loadQueue();
+        updateStats();
+        renderQueue();
+        showNotification('นำเข้าข้อมูลสำเร็จ');
+    } catch (error) {
+        console.error('Error importing data:', error);
+        showNotification('เกิดข้อผิดพลาดในการนำเข้าข้อมูล', 'error');
+    }
+    closeConfirmDialog();
 }
 
 // Utility Functions
@@ -477,5 +668,91 @@ function showNotification(message, type = 'success', customIcon = null) {
     }, 3000);
 }
 
-// Initialize the application
-document.addEventListener('DOMContentLoaded', init);
+// Header Collapse Functionality
+function initHeaderCollapse() {
+    const header = document.querySelector('header');
+    const main = document.querySelector('main');
+    const collapseIndicator = document.createElement('button');
+    collapseIndicator.className = 'collapse-indicator';
+    collapseIndicator.innerHTML = `
+        <span></span>
+        <span></span>
+        <span></span>
+    `;
+    
+    // Create overlay background
+    const overlay = document.createElement('div');
+    overlay.className = 'overlay-bg';
+    
+    document.body.appendChild(collapseIndicator);
+    document.body.appendChild(overlay);
+    
+    let isOpen = false;
+    
+    function openMenu() {
+        isOpen = true;
+        header.classList.add('show');
+        overlay.classList.add('show');
+        main.classList.add('blur');
+    }
+    
+    function closeMenu() {
+        isOpen = false;
+        header.classList.remove('show');
+        overlay.classList.remove('show');
+        main.classList.remove('blur');
+    }
+    
+    collapseIndicator.addEventListener('click', () => {
+        if (isOpen) {
+            closeMenu();
+        } else {
+            openMenu();
+        }
+    });
+
+    overlay.addEventListener('click', closeMenu);
+}
+
+// Theme Management
+function initTheme() {
+    const themeToggle = document.getElementById('themeToggle');
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    updateThemeIcon(savedTheme);
+
+    if (themeToggle) {
+        themeToggle.addEventListener('click', toggleTheme);
+    }
+}
+
+function toggleTheme() {
+    const currentTheme = document.documentElement.getAttribute('data-theme');
+    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+    
+    document.documentElement.setAttribute('data-theme', newTheme);
+    localStorage.setItem('theme', newTheme);
+    updateThemeIcon(newTheme);
+    
+    // Show notification
+    showNotification(
+        newTheme === 'dark' ? 'เปลี่ยนเป็นโหมดกลางคืน' : 'เปลี่ยนเป็นโหมดกลางวัน',
+        'success'
+    );
+}
+
+function updateThemeIcon(theme) {
+    const themeToggle = document.getElementById('themeToggle');
+    if (themeToggle) {
+        themeToggle.innerHTML = theme === 'light' 
+            ? '<i class="fas fa-moon"></i>' 
+            : '<i class="fas fa-sun"></i>';
+    }
+}
+
+// Initialize header collapse when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    initHeaderCollapse();
+    init();
+    initTheme();
+});

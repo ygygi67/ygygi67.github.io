@@ -46,11 +46,23 @@
                             <span id="playedCount">0</span>
                         </div>
                     </div>
-                    <div class="admin-actions">
-                        <button id="systemStatus" class="status-btn enabled primary-btn" onclick="toggleSystemStatus()"><i class="fas fa-power-off"></i> ปิดระบบ</button>
-                        <button id="clearPlayed" class="secondary-btn"><i class="fas fa-trash"></i> ล้างรายการที่เล่นแล้ว</button>
-                        <button id="exportQueue" class="secondary-btn"><i class="fas fa-file-export"></i> ส่งออกข้อมูล</button>
-                        <button onclick="logoutAdmin()" class="secondary-btn"><i class="fas fa-sign-out-alt"></i> ออกจากระบบ</button>
+                    <div class="admin-controls">
+                        <button id="systemStatus" class="status-btn" onclick="toggleSystemStatus()">
+                            <i class="fas fa-power-off"></i> ปิดระบบ
+                        </button>
+                        <button id="clearPlayed" class="clear-btn">
+                            <i class="fas fa-broom"></i> ล้างรายการที่เล่นแล้ว
+                        </button>
+                        <button id="exportQueue" class="export-btn">
+                            <i class="fas fa-file-export"></i> ส่งออกข้อมูล
+                        </button>
+                        <label for="importQueue" class="import-btn">
+                            <i class="fas fa-file-import"></i> นำเข้าข้อมูล
+                            <input type="file" id="importQueue" accept=".json" onchange="importQueue(event)" style="display: none;">
+                        </label>
+                        <button onclick="logoutAdmin()" class="logout-btn">
+                            <i class="fas fa-sign-out-alt"></i> ออกจากระบบ
+                        </button>
                     </div>
                 </div>
 

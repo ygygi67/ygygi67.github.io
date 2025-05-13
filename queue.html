@@ -36,11 +36,21 @@
                 <h2><i class="fas fa-music"></i> คิวเพลง</h2>
                 <div class="queue-controls">
                     <input type="text" id="searchQueue" class="search-input" placeholder="ค้นหาเพลง...">
-                    <select id="filterStatus" class="filter-select">
-                        <option value="all">ทั้งหมด</option>
-                        <option value="pending">รอเล่น</option>
-                        <option value="played">เล่นแล้ว</option>
-                    </select>
+                    <div class="filter-sort-group">
+                        <select id="filterStatus" class="filter-select">
+                            <option value="all">ทั้งหมด</option>
+                            <option value="pending">รอเล่น</option>
+                            <option value="played">เล่นแล้ว</option>
+                        </select>
+                        <select id="sortBy" class="sort-select">
+                            <option value="time-desc">เรียงตามเวลา (ใหม่สุด)</option>
+                            <option value="time-asc">เรียงตามเวลา (เก่าสุด)</option>
+                            <option value="title-asc">เรียงตามชื่อเพลง (A-Z)</option>
+                            <option value="title-desc">เรียงตามชื่อเพลง (Z-A)</option>
+                            <option value="requester-asc">เรียงตามชื่อผู้ขอ (A-Z)</option>
+                            <option value="requester-desc">เรียงตามชื่อผู้ขอ (Z-A)</option>
+                        </select>
+                    </div>
                 </div>
                 <div id="songQueue" class="song-queue">
                     <!-- Songs will be added here dynamically -->
@@ -52,6 +62,11 @@
         <div id="notification" class="notification hidden">
             <div id="notificationMessage"></div>
         </div>
+
+        <!-- Theme Toggle -->
+        <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+            <i class="fas fa-moon"></i>
+        </button>
     </div>
 
     <script src="script.js"></script>

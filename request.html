@@ -66,8 +66,9 @@
             
             const requesterName = document.getElementById('requesterName').value;
             const songTitle = document.getElementById('songTitle').value;
+            const songLink = document.getElementById('songLink').value;
             
-            addSong(songTitle, requesterName);
+            addSong(songTitle, requesterName, songLink);
             
             // Reset form
             this.reset();
@@ -79,10 +80,10 @@
             notification.className = 'notification success';
             notification.classList.remove('hidden');
             
-            // Hide notification after 3 seconds
+            // Redirect to queue page after 1.5 seconds
             setTimeout(() => {
-                notification.classList.add('hidden');
-            }, 3000);
+                window.location.href = 'queue.html';
+            }, 1500);
         });
     </script>
 </body>
