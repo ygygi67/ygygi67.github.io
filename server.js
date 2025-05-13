@@ -23,6 +23,35 @@ app.get('/api/queue', (req, res) => {
     });
 });
 
+// Add new route for simple form submission
+app.post('/add', (req, res) => {
+    const { song } = req.body;
+    
+    if (!song) {
+        return res.status(400).json({ 
+            success: false, 
+            message: 'Song title is required' 
+        });
+    }
+
+    const newSong = {
+        id: Date.now().toString(),
+        title: song,
+        requester: 'ผู้ใช้',
+        link: '',
+        played: false,
+        timestamp: new Date().toISOString()
+    };
+    
+    // Add to pending songs
+    pendingSongs.push(newSong);
+    
+    console.log('New song added:', newSong); // Debug log
+    console.log('Current pending songs:', pendingSongs); // Debug log
+    
+    res.json({ success: true, song: newSong });
+});
+
 app.post('/api/queue', (req, res) => {
     const { title, requester, link } = req.body;
     
@@ -42,7 +71,6 @@ app.post('/api/queue', (req, res) => {
         timestamp: new Date().toISOString()
     };
     
-    // Add to pending songs by default
     pendingSongs.push(newSong);
     
     console.log('New song added:', newSong); // Debug log

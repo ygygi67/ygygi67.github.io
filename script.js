@@ -135,6 +135,12 @@ function setupEventListeners() {
             showNotification('ส่งคำขอเพลงสำเร็จ!');
         });
     }
+
+    // Add event listener for the simple song form
+    const simpleSongForm = document.querySelector('form[onsubmit="submitSong(event)"]');
+    if (simpleSongForm) {
+        simpleSongForm.addEventListener('submit', submitSong);
+    }
 }
 
 // System Status Management
@@ -794,9 +800,52 @@ async function checkServerConnection() {
                 'Accept': 'application/json'
             }
         });
-        return response.ok;
+        if (!response.ok) {
+            throw new Error(`Server responded with status: ${response.status}`);
+        }
+        return true;
     } catch (error) {
         console.error('Server connection error:', error);
+        showNotification('ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้', 'error');
         return false;
+    }
+}
+
+// Add submitSong function
+async function submitSong(e) {
+    e.preventDefault();
+    const songInput = document.getElementById("song");
+    const song = songInput.value.trim();
+
+    if (!song) {
+        showNotification('กรุณากรอกชื่อเพลง', 'error', '✕');
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_URL}/queue`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ 
+                title: song,
+                requester: 'ผู้ใช้',
+                link: ''
+            })
+        });
+
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+            songInput.value = ''; // Clear the input
+            await loadQueue(); // Reload the queue
+            showNotification('ส่งคำขอเพลงสำเร็จ!', 'success', '✓');
+        } else {
+            throw new Error(data.message || 'Failed to add song');
+        }
+    } catch (error) {
+        console.error('Error submitting song:', error);
+        showNotification('เกิดข้อผิดพลาดในการส่งเพลง: ' + error.message, 'error', '✕');
     }
 }
